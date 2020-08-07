@@ -1,0 +1,28 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    - cron: '0 0 */7 * *'
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: build
+      run: docker build . --file Dockerfile --tag tirex003/pixivdl
+
+    - name: push
+      run: |
+        docker login -u $DOCKER_LOGIN -p $DOCKER_SECRET
+        docker push tirex003/pixivdl:latest
+      env:
+        DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
+        DOCKER_SECRET: ${{ secrets.DOCKER_SECRET }}
+        
