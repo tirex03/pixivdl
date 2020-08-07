@@ -135,13 +135,17 @@ if args.op == 'following':
     for user_id in args.IDs:
         for artist_id in p.get_following_ids(user_id):
             for illust_id in p.get_work_ids(artist_id):
-                p.download_illust(illust_id)
+                i = p.download_illust(illust_id)
+                if i:
+                    print("Downloaded %s from %s with id %d." % (i["title"], i["username"], i["id"]))
                 if args.archive: p.save_archive(args.archive)
                 
 elif args.op == 'works':
     for artist_id in args.IDs:
         for illust_id in p.get_work_ids(artist_id):
-            p.download_illust(illust_id)
+            i = p.download_illust(illust_id)
+            if i:
+                print("Downloaded %s from %s with id %d." % (i["title"], i["username"], i["id"]))
             if args.archive: p.save_archive(args.archive)
 
 elif args.op == 'download':
