@@ -5,6 +5,23 @@ import argparse
 from urllib import parse as urlparse
 import requests
 import mimetypes
+import time
+
+def retry(count, delay, exceptions, give_up=False):
+    def inner(func):
+        def wrapped(*args, **kwargs):
+            for i in range(count):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions:
+                    time.sleep(delay)
+                    continue
+            
+            if not give_up:
+                return func(*args, **kwargs)
+        return wrapped
+    return inner
+
 
 class PixivDL:
     def __init__(self, login=None, password=None, archive=None, nameformat="$title$"):
@@ -19,6 +36,7 @@ class PixivDL:
 
         self.nameformat = nameformat
 
+    @retry(10, 2, (pixiv.PixivError))
     def get_following_ids(self, user_id):
         offset = 0
         while True:
@@ -30,7 +48,7 @@ class PixivDL:
             for preview in user_previews:
                 yield int(preview["user"]["id"])
             
-
+    @retry(10, 2, (pixiv.PixivError))
     def get_work_ids(self, user_id):
         offset = 0
         while True:
@@ -42,6 +60,7 @@ class PixivDL:
             for illust in illusts:
                 yield int(illust["id"])
 
+    @retry(10, 2, (pixiv.PixivError))
     def get_illust_details(self, illust_id):
         details = self.api.illust_detail(illust_id)["illust"]
         info = {
@@ -59,6 +78,7 @@ class PixivDL:
         
         return info, urls
 
+    @retry(10, 2, (pixiv.PixivError))
     def download_illust(self, illust_id):
         if illust_id in self.archive:
             return None
