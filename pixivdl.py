@@ -1,6 +1,5 @@
 import pixivpy3 as pixiv
 import sys
-import yaml
 import os
 import argparse
 from urllib import parse as urlparse
