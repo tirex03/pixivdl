@@ -7,23 +7,6 @@ import requests
 import mimetypes
 import time
 
-def retry(count, delay, exceptions, give_up=False):
-    def inner(func):
-        def wrapped(*args, **kwargs):
-            for i in range(count):
-                try:
-                    return func(*args, **kwargs)
-                except exceptions as e:
-                    time.sleep(delay)
-                    print(e, file=sys.stderr)
-                    continue
-            
-            if not give_up:
-                return func(*args, **kwargs)
-        return wrapped
-    return inner
-
-
 class PixivDL:
     def __init__(self, login=None, password=None, archive=None, nameformat="$title$"):
         self.api = pixiv.AppPixivAPI()
@@ -37,7 +20,6 @@ class PixivDL:
 
         self.nameformat = nameformat
 
-    @retry(10, 2, (pixiv.PixivError, KeyError))
     def get_following_ids(self, user_id):
         offset = 0
         while True:
@@ -49,7 +31,6 @@ class PixivDL:
             for preview in user_previews:
                 yield int(preview["user"]["id"])
             
-    @retry(10, 2, (pixiv.PixivError, KeyError))
     def get_work_ids(self, user_id):
         offset = 0
         while True:
@@ -61,7 +42,6 @@ class PixivDL:
             for illust in illusts:
                 yield int(illust["id"])
 
-    @retry(10, 2, (pixiv.PixivError, KeyError))
     def get_illust_details(self, illust_id):
         details = self.api.illust_detail(illust_id)["illust"]
         info = {
@@ -79,7 +59,6 @@ class PixivDL:
         
         return info, urls
 
-    @retry(10, 2, (pixiv.PixivError, KeyError))
     def download_illust(self, illust_id):
         if illust_id in self.archive:
             return None
@@ -155,26 +134,32 @@ if args.archive:
     if os.path.isfile(args.archive):
         p.load_archive(args.archive)
 
-if args.op == 'following':
-    for user_id in args.IDs:
-        for artist_id in p.get_following_ids(user_id):
-            for illust_id in p.get_work_ids(artist_id):
+while True:
+    try:
+        if args.op == 'following':
+            for user_id in args.IDs:
+                for artist_id in p.get_following_ids(user_id):
+                    for illust_id in p.get_work_ids(artist_id):
+                        i = p.download_illust(illust_id)
+                        if i:
+                            print("Downloaded %s from %s with id %d." % (i["title"], i["username"], i["id"]))
+                        if args.archive: p.save_archive(args.archive)
+                        
+        elif args.op == 'works':
+            for artist_id in args.IDs:
+                for illust_id in p.get_work_ids(artist_id):
+                    i = p.download_illust(illust_id)
+                    if i:
+                        print("Downloaded %s from %s with id %d." % (i["title"], i["username"], i["id"]))
+                    if args.archive: p.save_archive(args.archive)
+
+        elif args.op == 'download':
+            for illust_id in args.IDs:
                 i = p.download_illust(illust_id)
                 if i:
                     print("Downloaded %s from %s with id %d." % (i["title"], i["username"], i["id"]))
                 if args.archive: p.save_archive(args.archive)
-                
-elif args.op == 'works':
-    for artist_id in args.IDs:
-        for illust_id in p.get_work_ids(artist_id):
-            i = p.download_illust(illust_id)
-            if i:
-                print("Downloaded %s from %s with id %d." % (i["title"], i["username"], i["id"]))
-            if args.archive: p.save_archive(args.archive)
-
-elif args.op == 'download':
-    for illust_id in args.IDs:
-        i = p.download_illust(illust_id)
-        if i:
-            print("Downloaded %s from %s with id %d." % (i["title"], i["username"], i["id"]))
-        if args.archive: p.save_archive(args.archive)
+    except (pixiv.PixivError, KeyError) as e:
+        print(e, file=sys.stderr)
+        continue
+    break
