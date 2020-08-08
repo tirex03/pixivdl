@@ -88,7 +88,10 @@ class PixivDL:
 
         name = self.nameformat
         for k, v in info.items():
-            name = name.replace("$%s$" % k, str(v))
+            fv = str(v)
+            fv = fv.replace("/", "d")
+            fv = fv.replace("\0", "0")
+            name = name.replace("$%s$" % k, fv)
 
 
         folder = os.path.split(name)[0]
