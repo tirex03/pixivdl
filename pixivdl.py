@@ -166,7 +166,7 @@ while True:
                 if args.archive: p.save_archive(args.archive)
     except (pixiv.PixivError, KeyError) as e:
         print(e, file=sys.stderr)
-        time.sleep(10)
+        time.sleep(30)
         p.reinitialize_api(login, password)
         continue
     break
