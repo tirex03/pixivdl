@@ -13,8 +13,9 @@ def retry(count, delay, exceptions, give_up=False):
             for i in range(count):
                 try:
                     return func(*args, **kwargs)
-                except exceptions:
+                except exceptions as e:
                     time.sleep(delay)
+                    print(e, file=sys.stderr)
                     continue
             
             if not give_up:
@@ -36,7 +37,7 @@ class PixivDL:
 
         self.nameformat = nameformat
 
-    @retry(10, 2, (pixiv.PixivError))
+    @retry(10, 2, (pixiv.PixivError, KeyError))
     def get_following_ids(self, user_id):
         offset = 0
         while True:
@@ -48,7 +49,7 @@ class PixivDL:
             for preview in user_previews:
                 yield int(preview["user"]["id"])
             
-    @retry(10, 2, (pixiv.PixivError))
+    @retry(10, 2, (pixiv.PixivError, KeyError))
     def get_work_ids(self, user_id):
         offset = 0
         while True:
@@ -60,7 +61,7 @@ class PixivDL:
             for illust in illusts:
                 yield int(illust["id"])
 
-    @retry(10, 2, (pixiv.PixivError))
+    @retry(10, 2, (pixiv.PixivError, KeyError))
     def get_illust_details(self, illust_id):
         details = self.api.illust_detail(illust_id)["illust"]
         info = {
@@ -78,7 +79,7 @@ class PixivDL:
         
         return info, urls
 
-    @retry(10, 2, (pixiv.PixivError))
+    @retry(10, 2, (pixiv.PixivError, KeyError))
     def download_illust(self, illust_id):
         if illust_id in self.archive:
             return None
