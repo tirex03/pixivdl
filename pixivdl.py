@@ -9,14 +9,14 @@ import time
 
 def pixiv_retry(count, delay, exceptions):
     def inner(func):
-        def wrapped(self, *args, **kwargs):
+        def wrapped(pixivdl, *args, **kwargs):
             for i in range(count-1):
                 try:
-                    return func(*args, **kwargs)
+                    return func(pixivdl, *args, **kwargs)
                 except exceptions as e:
                     time.sleep(delay)
                     print(e, file=sys.stderr)
-                    self.reinitialize_api()
+                    pixivdl.reinitialize_api()
                     continue
 
             return func(*args, **kwargs)
