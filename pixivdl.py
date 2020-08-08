@@ -20,6 +20,11 @@ class PixivDL:
 
         self.nameformat = nameformat
 
+    def reinitialize_api(self, login=None, password=None):
+        self.api = pixiv.AppPixivAPI()
+        if login and password:
+            self.api.login(login, password)
+
     def get_following_ids(self, user_id):
         offset = 0
         while True:
@@ -162,5 +167,6 @@ while True:
     except (pixiv.PixivError, KeyError) as e:
         print(e, file=sys.stderr)
         time.sleep(10)
+        p.reinitialize_api(login, password)
         continue
     break
