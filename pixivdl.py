@@ -7,9 +7,27 @@ import requests
 import mimetypes
 import time
 
+def pixiv_retry(count, delay, exceptions):
+    def inner(func):
+        def wrapped(self, *args, **kwargs):
+            for i in range(count-1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    time.sleep(delay)
+                    print(e, file=sys.stderr)
+                    self.reinitialize_api()
+                    continue
+
+            return func(*args, **kwargs)
+        return wrapped
+    return inner
+
 class PixivDL:
     def __init__(self, login=None, password=None, archive=None, nameformat="$title$"):
         self.api = pixiv.AppPixivAPI()
+        self.login = login
+        self.password = password
         if login and password:
             self.api.login(login, password)
 
@@ -20,11 +38,12 @@ class PixivDL:
 
         self.nameformat = nameformat
 
-    def reinitialize_api(self, login=None, password=None):
+    def reinitialize_api(self):
         self.api = pixiv.AppPixivAPI()
-        if login and password:
-            self.api.login(login, password)
+        if self.login and self.password:
+            self.api.login(self.login, self.password)
 
+    @pixiv_retry(10, 5, (pixiv.PixivError, KeyError))
     def get_following_ids(self, user_id):
         offset = 0
         while True:
@@ -35,7 +54,8 @@ class PixivDL:
 
             for preview in user_previews:
                 yield int(preview["user"]["id"])
-            
+    
+    @pixiv_retry(10, 5, (pixiv.PixivError, KeyError))
     def get_work_ids(self, user_id):
         offset = 0
         while True:
@@ -47,6 +67,7 @@ class PixivDL:
             for illust in illusts:
                 yield int(illust["id"])
 
+    @pixiv_retry(10, 5, (pixiv.PixivError, KeyError))
     def get_illust_details(self, illust_id):
         details = self.api.illust_detail(illust_id)["illust"]
         info = {
@@ -64,6 +85,7 @@ class PixivDL:
         
         return info, urls
 
+    @pixiv_retry(10, 5, (pixiv.PixivError, KeyError))
     def download_illust(self, illust_id):
         if illust_id in self.archive:
             return None
@@ -167,6 +189,6 @@ while True:
     except (pixiv.PixivError, KeyError) as e:
         print(e, file=sys.stderr)
         time.sleep(30)
-        p.reinitialize_api(login, password)
+        p.reinitialize_api()
         continue
     break
